@@ -2,13 +2,10 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 from sqlalchemy import create_engine
 
-
 Base = declarative_base()
 
 # Define the Restaurant, Customer, and Review models
 # models.py
-
-# ... (previous code for imports, base, and other classes)
 
 class Restaurant(Base):
     __tablename__ = 'restaurants'
@@ -33,7 +30,6 @@ class Restaurant(Base):
         # Find the restaurant with the highest price
         return session.query(cls).order_by(cls.price.desc()).first()
 
-
 class Customer(Base):
     __tablename__ = 'customers'
 
@@ -46,10 +42,24 @@ class Customer(Base):
     # Define a relationship to connect Customer to Restaurant through Review
     restaurants = relationship('Restaurant', secondary='reviews', back_populates='customers', overlaps='reviews')
 
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
     def favorite_restaurant(self):
         # Find the restaurant with the highest star rating for this customer
         highest_rating_review = max(self.reviews, key=lambda review: review.star_rating)
         return highest_rating_review.restaurant
+
+    def add_review(self, restaurant, rating):
+        review = Review(star_rating=rating, restaurant=restaurant, customer=self)
+        session.add(review)
+        session.commit()
+
+    def delete_reviews(self, restaurant):
+        reviews_to_delete = [review for review in self.reviews if review.restaurant == restaurant]
+        for review in reviews_to_delete:
+            session.delete(review)
+        session.commit()
 
 class Review(Base):
     __tablename__ = 'reviews'
@@ -91,14 +101,12 @@ if __name__ == '__main__':
 
     # Test the methods
     customer = session.query(Customer).first()
-    print(f"{customer.first_name}'s favorite restaurant is: {customer.favorite_restaurant().name}")
+    print(f"Customer's Full Name: {customer.full_name()}")
+    print(f"{customer.full_name()}'s favorite restaurant is: {customer.favorite_restaurant().name}")
 
     restaurant = session.query(Restaurant).first()
+    customer.add_review(restaurant, 5) 
+    print("Review added successfully!")
     print(f"Reviews for {restaurant.name}:")
     for review in restaurant.all_reviews():
         print(review)
-
-
-
-
-
